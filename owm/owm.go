@@ -105,8 +105,9 @@ func (c *OWMManager) FetchData() {
 		body, readErr := ioutil.ReadAll(resp.Body)
 		if readErr != nil {
 			log.Error("Error reading OneCall data:", err)
+		} else {
+			json.Unmarshal(body, &c.Current)
 		}
-		json.Unmarshal(body, &c.Current)
 	}
 
 	resp, err = http.Get(fmt.Sprintf(pollutionUrl, c.Latitude, c.Longitude, c.ApiKey))
@@ -116,8 +117,9 @@ func (c *OWMManager) FetchData() {
 		body, readErr := ioutil.ReadAll(resp.Body)
 		if readErr != nil {
 			log.Error("Error reading Pollution data:", err)
+		} else {
+			json.Unmarshal(body, &c.Pollution)
 		}
-		json.Unmarshal(body, &c.Pollution)
 	}
 }
 

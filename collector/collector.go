@@ -42,6 +42,14 @@ type OpenweatherCollector struct {
 	sunset      *prom.Desc
 	uvi         *prom.Desc
 	aqi         *prom.Desc
+	co          *prom.Desc
+	no          *prom.Desc
+	no2         *prom.Desc
+	o3          *prom.Desc
+	so2         *prom.Desc
+	pm25        *prom.Desc
+	pm10        *prom.Desc
+	nh3         *prom.Desc
 }
 
 type Location struct {
@@ -122,6 +130,38 @@ func NewOpenweatherCollector(degreesUnit string, language string, apikey string,
 			"Air quality index",
 			[]string{"location"}, nil,
 		),
+		co: prom.NewDesc("openweather_co",
+			"Сoncentration of CO (Carbon monoxide), μg/m3",
+			[]string{"location"}, nil,
+		),
+		no: prom.NewDesc("openweather_no",
+			"Сoncentration of NO (Nitrogen monoxide), μg/m3",
+			[]string{"location"}, nil,
+		),
+		no2: prom.NewDesc("openweather_no2",
+			"Сoncentration of NO2 (Nitrogen dioxide), μg/m3",
+			[]string{"location"}, nil,
+		),
+		o3: prom.NewDesc("openweather_o3",
+			"Сoncentration of O3 (Ozone), μg/m3",
+			[]string{"location"}, nil,
+		),
+		so2: prom.NewDesc("openweather_so2",
+			"Сoncentration of SO2 (Sulphur dioxide), μg/m3",
+			[]string{"location"}, nil,
+		),
+		pm25: prom.NewDesc("openweather_pm2_5",
+			"Сoncentration of PM2.5 (Fine particles matter), μg/m3",
+			[]string{"location"}, nil,
+		),
+		pm10: prom.NewDesc("openweather_pm10",
+			"Сoncentration of PM10 (Coarse particulate matter), μg/m3",
+			[]string{"location"}, nil,
+		),
+		nh3: prom.NewDesc("openweather_nh3",
+			"Сoncentration of NH3 (Ammonia), μg/m3",
+			[]string{"location"}, nil,
+		),
 	}
 }
 
@@ -139,6 +179,14 @@ func (collector *OpenweatherCollector) Describe(ch chan<- *prom.Desc) {
 	ch <- collector.sunset
 	ch <- collector.uvi
 	ch <- collector.aqi
+	ch <- collector.co
+	ch <- collector.no
+	ch <- collector.no2
+	ch <- collector.o3
+	ch <- collector.so2
+	ch <- collector.pm25
+	ch <- collector.pm10
+	ch <- collector.nh3
 }
 
 func (c *OpenweatherCollector) Collect(ch chan<- prom.Metric) {
@@ -161,6 +209,14 @@ func (c *OpenweatherCollector) Collect(ch chan<- prom.Metric) {
 		ch <- prom.MustNewConstMetric(c.uvi, prom.GaugeValue, float64(w.Current.Values.UVI), l.Location)
 		if len(w.Pollution.List) > 0 {
 			ch <- prom.MustNewConstMetric(c.aqi, prom.GaugeValue, float64(w.Pollution.List[0].Main.AQI), l.Location)
+			ch <- prom.MustNewConstMetric(c.co, prom.GaugeValue, w.Pollution.List[0].Components.CO, l.Location)
+			ch <- prom.MustNewConstMetric(c.no, prom.GaugeValue, w.Pollution.List[0].Components.NO, l.Location)
+			ch <- prom.MustNewConstMetric(c.no2, prom.GaugeValue, w.Pollution.List[0].Components.NO2, l.Location)
+			ch <- prom.MustNewConstMetric(c.o3, prom.GaugeValue, w.Pollution.List[0].Components.O3, l.Location)
+			ch <- prom.MustNewConstMetric(c.so2, prom.GaugeValue, w.Pollution.List[0].Components.SO2, l.Location)
+			ch <- prom.MustNewConstMetric(c.pm25, prom.GaugeValue, w.Pollution.List[0].Components.PM25, l.Location)
+			ch <- prom.MustNewConstMetric(c.pm10, prom.GaugeValue, w.Pollution.List[0].Components.PM10, l.Location)
+			ch <- prom.MustNewConstMetric(c.nh3, prom.GaugeValue, w.Pollution.List[0].Components.NH3, l.Location)
 		}
 	}
 }
