@@ -1,0 +1,13 @@
+version: '3.2'
+services:
+  owm:
+    build: .
+    container_name: openweather-exporter
+    ports:
+    - "9091:9091"
+    environment:
+    - OW_LISTEN_ADDRESS=0.0.0.0:9091
+    - OW_CITY=Toronto, ON
+    - OW_APIKEY=CHANGEME
+    - OW_DEGREES_UNIT=C
+    restart: unless-stopped

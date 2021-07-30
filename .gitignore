@@ -14,5 +14,7 @@
 # Dependency directories (remove the comment below to include it)
 vendor/
 
-# IntelliJ specific folders/files
+# Editor specific folders/files
 .idea/
+.vscode/
+__debug_bin
