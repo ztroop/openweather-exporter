@@ -1,5 +1,9 @@
 # OpenWeather Exporter
 
+[![build](https://github.com/ztroop/openweather-exporter/actions/workflows/build.yml/badge.svg)](https://github.com/ztroop/openweather-exporter/actions/workflows/build.yml)
+[![pulls](https://img.shields.io/docker/pulls/ztroop/openweather-exporter)](https://hub.docker.com/r/ztroop/openweather-exporter)
+
+
 Prometheus exporter for [OpenWeather API V2](https://openweathermap.org/api), supporting `OneCall` and `Pollution` endpoints.
 
 ## Configuration
