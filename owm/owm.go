@@ -26,15 +26,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
-type OWMManager struct {
+type OWMHandler struct {
 	ApiKey    string
 	Latitude  float64
 	Longitude float64
+	Unit      string
 	Current   OneCallValues
 	Pollution PollutionValues
 }
@@ -90,15 +92,15 @@ type PollutionValues struct {
 	List []PollutionItem
 }
 
-const oneCallUrl = "https://api.openweathermap.org/data/2.5/onecall?lat=%v&lon=%v&exclude=minutely,hourly,daily&appid=%s"
+const oneCallUrl = "https://api.openweathermap.org/data/2.5/onecall?lat=%v&lon=%v&exclude=minutely,hourly,daily&units=%s&appid=%s"
 const pollutionUrl = "https://api.openweathermap.org/data/2.5/air_pollution?lat=%v&lon=%v&appid=%s"
 
-func (c *OWMManager) FetchData() {
+func (c *OWMHandler) FetchData() {
 	client := http.Client{
 		Timeout: time.Second * 30,
 	}
 
-	resp, err := client.Get(fmt.Sprintf(oneCallUrl, c.Latitude, c.Longitude, c.ApiKey))
+	resp, err := client.Get(fmt.Sprintf(oneCallUrl, c.Latitude, c.Longitude, c.Unit, c.ApiKey))
 	if err != nil {
 		log.Error("Error requesting OneCall API:", err)
 	} else {
@@ -123,8 +125,19 @@ func (c *OWMManager) FetchData() {
 	}
 }
 
-func NewOWMHandler(key string, lon float64, lat float64) *OWMManager {
-	return &OWMManager{
+func (c *OWMHandler) SetUnit(degreeUnit string) {
+	d := strings.ToUpper(degreeUnit)
+	if d == "C" {
+		c.Unit = "metric"
+	} else if d == "F" {
+		c.Unit = "imperial"
+	} else {
+		c.Unit = "standard"
+	}
+}
+
+func NewOWMHandler(key string, lon float64, lat float64) *OWMHandler {
+	return &OWMHandler{
 		ApiKey:    key,
 		Longitude: lon,
 		Latitude:  lat,
