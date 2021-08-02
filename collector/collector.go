@@ -35,11 +35,13 @@ type OpenweatherCollector struct {
 	pressure    *prom.Desc
 	windspeed   *prom.Desc
 	winddegree  *prom.Desc
+	windgust    *prom.Desc
 	rain1h      *prom.Desc
 	snow1h      *prom.Desc
 	cloudiness  *prom.Desc
 	sunrise     *prom.Desc
 	sunset      *prom.Desc
+	dewpoint    *prom.Desc
 	uvi         *prom.Desc
 	aqi         *prom.Desc
 	co          *prom.Desc
@@ -72,7 +74,6 @@ func resolveLocations(locations string) []Location {
 }
 
 func NewOpenweatherCollector(degreesUnit string, language string, apikey string, locations string) *OpenweatherCollector {
-
 	return &OpenweatherCollector{
 		ApiKey:      apikey,
 		DegreesUnit: degreesUnit,
@@ -94,10 +95,6 @@ func NewOpenweatherCollector(degreesUnit string, language string, apikey string,
 			"Current Atmospheric pressure hPa",
 			[]string{"location"}, nil,
 		),
-		windspeed: prom.NewDesc("openweather_windspeed",
-			"Current Wind Speed in mph or meters/sec if imperial",
-			[]string{"location"}, nil,
-		),
 		rain1h: prom.NewDesc("openweather_rain1h",
 			"Rain volume for last hour, in millimeters",
 			[]string{"location"}, nil,
@@ -106,8 +103,16 @@ func NewOpenweatherCollector(degreesUnit string, language string, apikey string,
 			"Snow volume for last hour, in millimeters",
 			[]string{"location"}, nil,
 		),
+		windspeed: prom.NewDesc("openweather_windspeed",
+			"Current Wind Speed in mph or meters/sec if imperial",
+			[]string{"location"}, nil,
+		),
 		winddegree: prom.NewDesc("openweather_winddegree",
 			"Wind direction, degrees (meteorological)",
+			[]string{"location"}, nil,
+		),
+		windgust: prom.NewDesc("openweather_windgust",
+			"Wind gust",
 			[]string{"location"}, nil,
 		),
 		cloudiness: prom.NewDesc("openweather_cloudiness",
@@ -122,7 +127,11 @@ func NewOpenweatherCollector(degreesUnit string, language string, apikey string,
 			"Sunset time, unix, UTC",
 			[]string{"location"}, nil,
 		),
-		uvi: prom.NewDesc("openweaver_uvi",
+		dewpoint: prom.NewDesc("openweather_dewpoint",
+			"Atmospheric temperature below which water droplets begin to condense",
+			[]string{"location"}, nil,
+		),
+		uvi: prom.NewDesc("openweather_uvi",
 			"Current UV index",
 			[]string{"location"}, nil,
 		),
@@ -172,11 +181,13 @@ func (collector *OpenweatherCollector) Describe(ch chan<- *prom.Desc) {
 	ch <- collector.pressure
 	ch <- collector.windspeed
 	ch <- collector.winddegree
+	ch <- collector.windgust
 	ch <- collector.rain1h
 	ch <- collector.snow1h
 	ch <- collector.cloudiness
 	ch <- collector.sunrise
 	ch <- collector.sunset
+	ch <- collector.dewpoint
 	ch <- collector.uvi
 	ch <- collector.aqi
 	ch <- collector.co
@@ -190,7 +201,6 @@ func (collector *OpenweatherCollector) Describe(ch chan<- *prom.Desc) {
 }
 
 func (c *OpenweatherCollector) Collect(ch chan<- prom.Metric) {
-
 	for _, l := range c.Locations {
 		w := owm.NewOWMHandler(c.ApiKey, l.Longitude, l.Latitude)
 		w.SetUnit(c.DegreesUnit)
@@ -202,12 +212,14 @@ func (c *OpenweatherCollector) Collect(ch chan<- prom.Metric) {
 		ch <- prom.MustNewConstMetric(c.pressure, prom.GaugeValue, w.Current.Values.Pressure, l.Location)
 		ch <- prom.MustNewConstMetric(c.windspeed, prom.GaugeValue, w.Current.Values.WindSpeed, l.Location)
 		ch <- prom.MustNewConstMetric(c.winddegree, prom.GaugeValue, w.Current.Values.WindDegree, l.Location)
+		ch <- prom.MustNewConstMetric(c.windgust, prom.GaugeValue, w.Current.Values.WindGust, l.Location)
 		ch <- prom.MustNewConstMetric(c.rain1h, prom.GaugeValue, w.Current.Values.Rain1Hour, l.Location)
 		ch <- prom.MustNewConstMetric(c.snow1h, prom.GaugeValue, w.Current.Values.Snow1Hour, l.Location)
 		ch <- prom.MustNewConstMetric(c.cloudiness, prom.GaugeValue, float64(w.Current.Values.Clouds), l.Location)
 		ch <- prom.MustNewConstMetric(c.sunrise, prom.GaugeValue, float64(w.Current.Values.Sunrise), l.Location)
 		ch <- prom.MustNewConstMetric(c.sunset, prom.GaugeValue, float64(w.Current.Values.Sunset), l.Location)
-		ch <- prom.MustNewConstMetric(c.uvi, prom.GaugeValue, float64(w.Current.Values.UVI), l.Location)
+		ch <- prom.MustNewConstMetric(c.dewpoint, prom.GaugeValue, w.Current.Values.DewPoint, l.Location)
+		ch <- prom.MustNewConstMetric(c.uvi, prom.GaugeValue, w.Current.Values.UVI, l.Location)
 		if len(w.Pollution.List) > 0 {
 			ch <- prom.MustNewConstMetric(c.aqi, prom.GaugeValue, float64(w.Pollution.List[0].Main.AQI), l.Location)
 			ch <- prom.MustNewConstMetric(c.co, prom.GaugeValue, w.Pollution.List[0].Components.CO, l.Location)

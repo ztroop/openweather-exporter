@@ -50,11 +50,12 @@ type CurrentValues struct {
 	Pressure    float64 `json:"pressure"`
 	Humidity    float64 `json:"humidity"`
 	DewPoint    float64 `json:"dew_point"`
-	UVI         int8    `json:"uvi"`
+	UVI         float64 `json:"uvi"`
 	Clouds      int8    `json:"clouds"`
 	Visibility  float64 `json:"visibility"`
 	WindSpeed   float64 `json:"wind_speed"`
 	WindDegree  float64 `json:"wind_deg"`
+	WindGust    float64 `json:"wind_gust"`
 	Rain1Hour   float64 `json:"rain.1h"`
 	Snow1Hour   float64 `json:"snow.1h"`
 }
