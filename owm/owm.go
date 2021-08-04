@@ -101,13 +101,14 @@ func (c *OWMHandler) FetchData() {
 		Timeout: time.Second * 30,
 	}
 
+	log.Info("Fetching OWM data")
 	resp, err := client.Get(fmt.Sprintf(oneCallUrl, c.Latitude, c.Longitude, c.Unit, c.ApiKey))
 	if err != nil {
-		log.Error("Error requesting OneCall API:", err)
+		log.Error("Error requesting OneCall API: ", err)
 	} else {
 		body, readErr := ioutil.ReadAll(resp.Body)
 		if readErr != nil {
-			log.Error("Error reading OneCall data:", err)
+			log.Error("Error reading OneCall data: ", err)
 		} else {
 			json.Unmarshal(body, &c.Current)
 		}
@@ -115,11 +116,11 @@ func (c *OWMHandler) FetchData() {
 
 	resp, err = http.Get(fmt.Sprintf(pollutionUrl, c.Latitude, c.Longitude, c.ApiKey))
 	if err != nil {
-		log.Error("Error requesting Pollution API:", err)
+		log.Error("Error requesting Pollution API: ", err)
 	} else {
 		body, readErr := ioutil.ReadAll(resp.Body)
 		if readErr != nil {
-			log.Error("Error reading Pollution data:", err)
+			log.Error("Error reading Pollution data: ", err)
 		} else {
 			json.Unmarshal(body, &c.Pollution)
 		}

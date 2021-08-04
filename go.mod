@@ -3,6 +3,7 @@ module github.com/ztroop/openweather-exporter
 go 1.16
 
 require (
+	github.com/ReneKroon/ttlcache/v2 v2.7.0 // indirect
 	github.com/codingsince1985/geo-golang v1.7.0
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
