@@ -16,7 +16,10 @@ package main
 import (
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 
+	"github.com/ReneKroon/ttlcache/v2"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,6 +35,7 @@ var (
 	city        = app.Flag("city", "City for Openweather to gather metrics from.").Envar("OW_CITY").Default("Toronto, ON").String()
 	degreesUnit = app.Flag("degrees-unit", "The base unit for temperature output. Fahrenheit or Celsius").Envar("OW_DEGREES_UNIT").Default("C").String()
 	language    = app.Flag("language", "The language for metric output").Envar("OW_LANGUAGE").Default("EN").String()
+	cacheTTL    = app.Flag("cache-ttl", "Cache time-to-live in seconds").Envar("OW_CACHE_TTL").Default("300").String()
 )
 
 func main() {
@@ -39,10 +43,16 @@ func main() {
 	formatter := &log.TextFormatter{
 		FullTimestamp: true,
 	}
-
 	log.SetFormatter(formatter)
 
-	weatherCollector := collector.NewOpenweatherCollector(*degreesUnit, *language, *apiKey, *city)
+	var cache ttlcache.SimpleCache = ttlcache.NewCache()
+	ttl, err := strconv.ParseUint(*cacheTTL, 10, 64)
+	if err != nil {
+		log.Fatal("Invalid TTL value: ", err)
+	}
+	cache.SetTTL(time.Duration(ttl) * time.Second)
+
+	weatherCollector := collector.NewOpenweatherCollector(*degreesUnit, *language, *apiKey, *city, &cache)
 	prometheus.MustRegister(weatherCollector)
 
 	http.Handle("/metrics", promhttp.Handler())

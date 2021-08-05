@@ -16,6 +16,7 @@ package collector
 import (
 	"strings"
 
+	"github.com/ReneKroon/ttlcache/v2"
 	"github.com/codingsince1985/geo-golang/openstreetmap"
 	prom "github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
@@ -24,11 +25,14 @@ import (
 	"github.com/ztroop/openweather-exporter/owm"
 )
 
+var notFound = ttlcache.ErrNotFound
+
 type OpenweatherCollector struct {
 	ApiKey      string
 	DegreesUnit string
 	Language    string
 	Locations   []Location
+	Cache       ttlcache.SimpleCache
 	temperature *prom.Desc
 	humidity    *prom.Desc
 	feelslike   *prom.Desc
@@ -73,12 +77,13 @@ func resolveLocations(locations string) []Location {
 	return res
 }
 
-func NewOpenweatherCollector(degreesUnit string, language string, apikey string, locations string) *OpenweatherCollector {
+func NewOpenweatherCollector(degreesUnit string, language string, apikey string, locations string, cache *ttlcache.SimpleCache) *OpenweatherCollector {
 	return &OpenweatherCollector{
 		ApiKey:      apikey,
 		DegreesUnit: degreesUnit,
 		Language:    language,
 		Locations:   resolveLocations(locations),
+		Cache:       *cache,
 		temperature: prom.NewDesc("openweather_temperature",
 			"Current temperature in degrees",
 			[]string{"location"}, nil,
@@ -202,34 +207,40 @@ func (collector *OpenweatherCollector) Describe(ch chan<- *prom.Desc) {
 
 func (c *OpenweatherCollector) Collect(ch chan<- prom.Metric) {
 	for _, l := range c.Locations {
-		w := owm.NewOWMHandler(c.ApiKey, l.Longitude, l.Latitude)
-		w.SetUnit(c.DegreesUnit)
-		w.FetchData()
+		var v owm.OWMHandler
+		if val, err := c.Cache.Get("OWM"); err != notFound || val != nil {
+			v = val.(owm.OWMHandler)
+		} else {
+			v = *owm.NewOWMHandler(c.ApiKey, l.Longitude, l.Latitude)
+			v.SetUnit(c.DegreesUnit)
+			v.FetchData()
+			c.Cache.Set("OWM", v)
+		}
 
-		ch <- prom.MustNewConstMetric(c.temperature, prom.GaugeValue, w.Current.Values.Temperature, l.Location)
-		ch <- prom.MustNewConstMetric(c.humidity, prom.GaugeValue, w.Current.Values.Humidity, l.Location)
-		ch <- prom.MustNewConstMetric(c.feelslike, prom.GaugeValue, w.Current.Values.FeelsLike, l.Location)
-		ch <- prom.MustNewConstMetric(c.pressure, prom.GaugeValue, w.Current.Values.Pressure, l.Location)
-		ch <- prom.MustNewConstMetric(c.windspeed, prom.GaugeValue, w.Current.Values.WindSpeed, l.Location)
-		ch <- prom.MustNewConstMetric(c.winddegree, prom.GaugeValue, w.Current.Values.WindDegree, l.Location)
-		ch <- prom.MustNewConstMetric(c.windgust, prom.GaugeValue, w.Current.Values.WindGust, l.Location)
-		ch <- prom.MustNewConstMetric(c.rain1h, prom.GaugeValue, w.Current.Values.Rain1Hour, l.Location)
-		ch <- prom.MustNewConstMetric(c.snow1h, prom.GaugeValue, w.Current.Values.Snow1Hour, l.Location)
-		ch <- prom.MustNewConstMetric(c.cloudiness, prom.GaugeValue, float64(w.Current.Values.Clouds), l.Location)
-		ch <- prom.MustNewConstMetric(c.sunrise, prom.GaugeValue, float64(w.Current.Values.Sunrise), l.Location)
-		ch <- prom.MustNewConstMetric(c.sunset, prom.GaugeValue, float64(w.Current.Values.Sunset), l.Location)
-		ch <- prom.MustNewConstMetric(c.dewpoint, prom.GaugeValue, w.Current.Values.DewPoint, l.Location)
-		ch <- prom.MustNewConstMetric(c.uvi, prom.GaugeValue, w.Current.Values.UVI, l.Location)
-		if len(w.Pollution.List) > 0 {
-			ch <- prom.MustNewConstMetric(c.aqi, prom.GaugeValue, float64(w.Pollution.List[0].Main.AQI), l.Location)
-			ch <- prom.MustNewConstMetric(c.co, prom.GaugeValue, w.Pollution.List[0].Components.CO, l.Location)
-			ch <- prom.MustNewConstMetric(c.no, prom.GaugeValue, w.Pollution.List[0].Components.NO, l.Location)
-			ch <- prom.MustNewConstMetric(c.no2, prom.GaugeValue, w.Pollution.List[0].Components.NO2, l.Location)
-			ch <- prom.MustNewConstMetric(c.o3, prom.GaugeValue, w.Pollution.List[0].Components.O3, l.Location)
-			ch <- prom.MustNewConstMetric(c.so2, prom.GaugeValue, w.Pollution.List[0].Components.SO2, l.Location)
-			ch <- prom.MustNewConstMetric(c.pm25, prom.GaugeValue, w.Pollution.List[0].Components.PM25, l.Location)
-			ch <- prom.MustNewConstMetric(c.pm10, prom.GaugeValue, w.Pollution.List[0].Components.PM10, l.Location)
-			ch <- prom.MustNewConstMetric(c.nh3, prom.GaugeValue, w.Pollution.List[0].Components.NH3, l.Location)
+		ch <- prom.MustNewConstMetric(c.temperature, prom.GaugeValue, v.Current.Values.Temperature, l.Location)
+		ch <- prom.MustNewConstMetric(c.humidity, prom.GaugeValue, v.Current.Values.Humidity, l.Location)
+		ch <- prom.MustNewConstMetric(c.feelslike, prom.GaugeValue, v.Current.Values.FeelsLike, l.Location)
+		ch <- prom.MustNewConstMetric(c.pressure, prom.GaugeValue, v.Current.Values.Pressure, l.Location)
+		ch <- prom.MustNewConstMetric(c.windspeed, prom.GaugeValue, v.Current.Values.WindSpeed, l.Location)
+		ch <- prom.MustNewConstMetric(c.winddegree, prom.GaugeValue, v.Current.Values.WindDegree, l.Location)
+		ch <- prom.MustNewConstMetric(c.windgust, prom.GaugeValue, v.Current.Values.WindGust, l.Location)
+		ch <- prom.MustNewConstMetric(c.rain1h, prom.GaugeValue, v.Current.Values.Rain1Hour, l.Location)
+		ch <- prom.MustNewConstMetric(c.snow1h, prom.GaugeValue, v.Current.Values.Snow1Hour, l.Location)
+		ch <- prom.MustNewConstMetric(c.cloudiness, prom.GaugeValue, float64(v.Current.Values.Clouds), l.Location)
+		ch <- prom.MustNewConstMetric(c.sunrise, prom.GaugeValue, float64(v.Current.Values.Sunrise), l.Location)
+		ch <- prom.MustNewConstMetric(c.sunset, prom.GaugeValue, float64(v.Current.Values.Sunset), l.Location)
+		ch <- prom.MustNewConstMetric(c.dewpoint, prom.GaugeValue, v.Current.Values.DewPoint, l.Location)
+		ch <- prom.MustNewConstMetric(c.uvi, prom.GaugeValue, v.Current.Values.UVI, l.Location)
+		if len(v.Pollution.List) > 0 {
+			ch <- prom.MustNewConstMetric(c.aqi, prom.GaugeValue, float64(v.Pollution.List[0].Main.AQI), l.Location)
+			ch <- prom.MustNewConstMetric(c.co, prom.GaugeValue, v.Pollution.List[0].Components.CO, l.Location)
+			ch <- prom.MustNewConstMetric(c.no, prom.GaugeValue, v.Pollution.List[0].Components.NO, l.Location)
+			ch <- prom.MustNewConstMetric(c.no2, prom.GaugeValue, v.Pollution.List[0].Components.NO2, l.Location)
+			ch <- prom.MustNewConstMetric(c.o3, prom.GaugeValue, v.Pollution.List[0].Components.O3, l.Location)
+			ch <- prom.MustNewConstMetric(c.so2, prom.GaugeValue, v.Pollution.List[0].Components.SO2, l.Location)
+			ch <- prom.MustNewConstMetric(c.pm25, prom.GaugeValue, v.Pollution.List[0].Components.PM25, l.Location)
+			ch <- prom.MustNewConstMetric(c.pm10, prom.GaugeValue, v.Pollution.List[0].Components.PM10, l.Location)
+			ch <- prom.MustNewConstMetric(c.nh3, prom.GaugeValue, v.Pollution.List[0].Components.NH3, l.Location)
 		}
 	}
 }

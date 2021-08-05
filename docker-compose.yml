@@ -10,4 +10,5 @@ services:
     - OW_CITY=Toronto, ON
     - OW_APIKEY=CHANGEME
     - OW_DEGREES_UNIT=C
+    - OW_CACHE_TTL=300
     restart: unless-stopped

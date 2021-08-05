@@ -17,6 +17,7 @@ OpenWeather exporter can be controlled by both ENV or CLI flags as described bel
 | `OW_CITY`                     | `city`                      | `Kitchener, CA`              | City/Location in which to gather weather metrics. Separate multiple locations with \| for example "Kitchener, CA\|Seattle, WA" |
 | `OW_DEGREES_UNIT`             | `degrees-unit`              | `C`                         | Unit in which to show metrics (Kelvin, Fahrenheit or Celsius) |
 | `OW_LANGUAGE`                 | `language`                  | `EN`                        | Language in which to show metrics |
+| `OW_CACHE_TTL`                | `cache-ttl`                 | `300`                       | Seconds to cache OWM response |
 
 ## Quickstart
 
@@ -35,5 +36,6 @@ services:
     - OW_CITY=Kitchener, CA
     - OW_APIKEY=CHANGEME
     - OW_DEGREES_UNIT=C
+    - OW_CACHE_TTL=300
     restart: unless-stopped
 ```
