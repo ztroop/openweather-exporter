@@ -45,14 +45,15 @@ func main() {
 	}
 	log.SetFormatter(formatter)
 
-	var cache ttlcache.SimpleCache = ttlcache.NewCache()
+	cache := ttlcache.NewCache()
 	ttl, err := strconv.ParseUint(*cacheTTL, 10, 64)
 	if err != nil {
 		log.Fatal("Invalid TTL value: ", err)
 	}
 	cache.SetTTL(time.Duration(ttl) * time.Second)
+	cache.SkipTTLExtensionOnHit(true)
 
-	weatherCollector := collector.NewOpenweatherCollector(*degreesUnit, *language, *apiKey, *city, &cache)
+	weatherCollector := collector.NewOpenweatherCollector(*degreesUnit, *language, *apiKey, *city, cache)
 	prometheus.MustRegister(weatherCollector)
 
 	http.Handle("/metrics", promhttp.Handler())

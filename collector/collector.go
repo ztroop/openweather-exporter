@@ -32,7 +32,7 @@ type OpenweatherCollector struct {
 	DegreesUnit string
 	Language    string
 	Locations   []Location
-	Cache       ttlcache.SimpleCache
+	Cache       *ttlcache.Cache
 	temperature *prom.Desc
 	humidity    *prom.Desc
 	feelslike   *prom.Desc
@@ -77,13 +77,13 @@ func resolveLocations(locations string) []Location {
 	return res
 }
 
-func NewOpenweatherCollector(degreesUnit string, language string, apikey string, locations string, cache *ttlcache.SimpleCache) *OpenweatherCollector {
+func NewOpenweatherCollector(degreesUnit string, language string, apikey string, locations string, cache *ttlcache.Cache) *OpenweatherCollector {
 	return &OpenweatherCollector{
 		ApiKey:      apikey,
 		DegreesUnit: degreesUnit,
 		Language:    language,
 		Locations:   resolveLocations(locations),
-		Cache:       *cache,
+		Cache:       cache,
 		temperature: prom.NewDesc("openweather_temperature",
 			"Current temperature in degrees",
 			[]string{"location"}, nil,
